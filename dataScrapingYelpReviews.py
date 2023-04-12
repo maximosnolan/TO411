@@ -12,11 +12,12 @@ RATE_LIMIT = 50
 #TODO: We should each take one city to compound results, just change this and let the script run.
 CITY = "Ann Arbor"
 
-def determineSentiment(business_id: str) -> float:
+def determineSentiment(name: str, business_id: str, location: str, rating: str, category: str, term, f):
     url = f'https://www.yelp.com/biz/{business_id}'
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
     review_container = soup.find_all('div', {'class': 'border-color--default__09f24__NPAKY'})
+    writer = csv.writer(f)
     #No reviews exist, default to 0
     if len(review_container) < PIVOT_MACRO:
         return 0.0
@@ -25,9 +26,9 @@ def determineSentiment(business_id: str) -> float:
     accumulator = 0
     for review in allReviews.split("."):
         analyzer = SentimentIntensityAnalyzer()
-        accumulator += analyzer.polarity_scores(review)["compound"]
+        accumulator = analyzer.polarity_scores(review)["compound"]
+        writer.writerow([name, business_id, location, rating, term, category, review, len(review.split(" ")), accumulator])
         numReviews += 1
-    return accumulator / numReviews
 
 
 
@@ -36,12 +37,12 @@ def main():
     client = yelpapi.YelpAPI(api_key)
     categories = ["Asian", "American", "Italian", "Mexican", "Dessert"]
     with open("reviewsFor" + CITY + ".csv", 'w', newline = "\n") as f:
-        f.write("name, id, location, rating, category, score\n")
-        writer = csv.writer(f)
+        f.write("name, id, location, rating, term, category, review, reviewLength, score\n")
+
         for category in categories:
             count = 0
             while True:
-                delivery_results = client.search_query(location= CITY, limit = RATE_LIMIT, offset = count)
+                delivery_results = client.search_query(location= CITY, limit = RATE_LIMIT, offset = count, term = category)
                 print("querey for...", category)
                 for business in delivery_results["businesses"]:
                     print("-----")
@@ -50,9 +51,7 @@ def main():
                     print("Location:", CITY)
                     print("Rating:", business["rating"])
                     print("Category:", business["categories"][0]["title"])
-                    score = determineSentiment(str(business["id"]))
-                    print("sentiment score: ", score)
-                    writer.writerow([business["name"], business["id"], CITY, business["rating"], business["categories"][0]["title"], score])
+                    determineSentiment(business["name"], business["id"], CITY, business["rating"], business["categories"][0]["title"], category,  f)
                     count +=1
                 if len(delivery_results["businesses"]) != RATE_LIMIT or count >= MAX_NUMBER_LOCATIONS_PER_CATAGORY:
                     print("FINISHED JOB FOR", category, "WITH", count, "RESULTS.\n")
