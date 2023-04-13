@@ -6,7 +6,7 @@ from textblob import TextBlob
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 PIVOT_MACRO = 132
-MAX_NUMBER_LOCATIONS_PER_CATAGORY = 1000
+MAX_NUMBER_LOCATIONS_PER_CATAGORY = 100
 RATE_LIMIT = 50
 
 #TODO: We should each take one city to compound results, just change this and let the script run.
